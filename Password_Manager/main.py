@@ -1,18 +1,13 @@
-import tkinter
 from tkinter import *
 from tkinter import messagebox
+import json
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 
 def generate_password():
     import random
     import array
-
-    # maximum length of password needed
-    # this can be changed to suit your password length
     MAX_LEN = 12
 
-    # declare arrays of the character that we need in out password
-    # Represented as chars to enable easy string concatenation
     DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     LOCASE_CHARACTERS = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
                          'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q',
@@ -51,28 +46,57 @@ def generate_password():
     password_entry.delete(0, END)
     set_pass(password)
 
-def set_pass(password):
-    password_entry.insert(0, password)
+def set_pass(pas):
+    password_entry.insert(0, pas)
+
+def find_password():
+    website_value = website_entry.get().lower()
+    try:
+        with open("data.json", "r") as file:
+            data = json.load(file)
+    except FileNotFoundError or KeyError:
+        messagebox.showinfo(message="No data is found to search")
+    else:
+        if website_value in data:
+            email = data[website_value]['email']
+            loaded_pass = data[website_value]["password"]
+            messagebox.showinfo(title="Credentials!", message=f"Email: {email}\nPassword: {loaded_pass}")
+        else:
+            messagebox.showwarning(title="No data found", message="No data exists for the website you mentioned")
 # ---------------------------- SAVE PASSWORD ------------------------------- #
 def save():
+    global data
     website_input = website_entry.get()
     username_input = username_entry.get()
     password_input = password_entry.get()
 
-    if len(website_input) == 0 or len(username_input) == 0 or len(password_input) == 0:
+    new_data = {
+        website_input: {
+            "email": username_input,
+            "password": password_input
+        }
+    }
+    if len(website_input) == 0 or len(password_input) == 0:
         messagebox.showwarning(title="Empty Fields", message="Please make sure to fill all the fields")
     else:
         is_ok = messagebox.askokcancel(title=website_input, message=f"These are the details entered:\n\nEmail/Username: {username_input}\nPassword: {password_input}")
         if is_ok:
-            with open("details.txt", "a") as file:
-                file.write(f"{website_entry.get()} | {username_entry.get()} | {password_entry.get()} \n")
+            try:
+                with open("data.json", "r") as file:
+                    data = json.load(file)
+                    data.update(new_data)
+            except FileNotFoundError:
+                data = new_data
+            finally:
+                with open("data.json", "w") as file:
+                    json.dump(data, file, indent=4)
+
             website_entry.delete(0, END)
-            username_entry.delete(0, END)
             password_entry.delete(0, END)
 # ---------------------------- UI SETUP ------------------------------- #
 
-window = Tk()
 
+window = Tk()
 window.title("Password Manager")
 window.config(padx=20, pady=20)
 # window.minsize(240, 240)
@@ -83,22 +107,28 @@ canvas.create_image(100, 100, image=logo_img)
 canvas.grid(column=1, row=0)
 
 website = Label(text="Website:")
-website.grid(column=0, row=2)
+website.grid(column=0, row=1)
 
-website_entry = Entry(width=50)
-website_entry.grid(column=1, row=2, columnspan=2)
+website_entry = Entry(width=31)
+website_entry.grid(column=1, row=1)
 website_entry.focus()
+
+search_btn = Button(text="Search", width=15, command=find_password)
+search_btn.grid(column=2, row=1)
+
+
 username = Label(text="Email/Username:")
-username.grid(column=0, row=3,pady=10)
+username.grid(column=0, row=3, pady=10)
 
 username_entry = Entry(width=50)
 username_entry.grid(column=1, row=3, columnspan=2)
+username_entry.insert(0, "demo@gmail.com")
 
 password = Label(text="Password:")
 password.grid(column=0, row=4)
 
 password_entry = Entry(width=31)
-password_entry.grid(column=1, row=4, pady=5,columnspan=1)
+password_entry.grid(column=1, row=4, pady=5, columnspan=1)
 
 generate_password = Button(text="Generate Password", command=generate_password)
 generate_password.grid(column=2, row=4)
